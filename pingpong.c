@@ -41,9 +41,23 @@ void pingpong_init() {
 
     setvbuf(stdout, 0, _IONBF, 0); //desativa o buffer de saida padrao (stdout), usado pela função printf.
     inicializa_tarefa_principal();
-    task_create(&despachante, dispatcher_body, "dispatcher :");   //Inicializa despachante de tarefas
+    task_create(&despachante, dispatcher_body, "despachante :"); //Inicializa despachante de tarefas
 }
 
+//Inicializa tarefa principal
+
+void inicializa_tarefa_principal() {
+    //A tarefa principal não pertence a nenhuma fila
+    tarefa_principal.next = NULL;
+    tarefa_principal.prev = NULL;
+    tarefa_principal.fila_atual = NULL;
+
+    tarefa_principal.id = count++; //ID da tarefa principal
+    tarefa_principal.parent = NULL; //A primeira tarefa não possui pai,...
+    tarefa_principal.status = EXECUTANDO; //... já está em execução quando foi criada ...
+
+    tarefa_atual = &tarefa_principal; //... e é a tarefa em execução no momento.
+}
 // gerência de tarefas =========================================================
 
 // Cria uma nova tarefa. Retorna um ID> 0 ou erro.
@@ -63,9 +77,8 @@ int task_create(task_t *task, // descritor da nova tarefa
     task->next = NULL;
     task->prev = NULL;
     task->fila_atual = NULL;
-    
-    getcontext(&(task->context));
 
+    getcontext(&(task->context));
     char *pilha = (char *) malloc(STACKSIZE);
 
     if (pilha) {
@@ -76,24 +89,25 @@ int task_create(task_t *task, // descritor da nova tarefa
         task->id = count++;
         task->parent = tarefa_atual;
 
-    } else {        
-        perror("Erro ao criar pilha");        
+    } else {
+        perror("Erro ao criar pilha");
         return -1;
     }
 
     makecontext(&task->context, (void*) (*start_func), 1, arg); //Associa o contexto à função passada por argumento    
-    if(task->id > 1){
-        userTasks++;                //Nova tarefa de usuário criada
-        if(task_set_ready(task))    //Tenta mudar seu estado para PRONTO e inserir na fila de prontos
+
+    //Tarefa de usuário é sempre maior que 1
+    if (task->id > 1) {
+        userTasks++; //Nova tarefa de usuário criada
+        if (task_set_ready(task)) //Tenta mudar seu estado para PRONTO e inserir na fila de prontos
         {
-            
-            perror("Erro ao mudar estado para PRONTA.");            
+            perror("Erro ao mudar estado para PRONTA.");
             return -1;
         }
-    }else{
-         task->status = PRONTA; //Finalizada as inicializações da tarefa
+    } else {
+        task->status = PRONTA; //Finalizada as inicializações da tarefa
     }
-   
+
 
 #ifdef DEBUG
 
@@ -113,13 +127,12 @@ void task_exit(int exitCode) {
     }
 
     task_t *tarefa_final = tarefa_atual;
-    
-    if(tarefa_final->id == 1){
+
+    if (tarefa_final->id == 1) {
         tarefa_atual = &tarefa_principal;
-    }
-    else{
+    } else {
         tarefa_atual = &despachante;
-    }    
+    }
     userTasks--;
     tarefa_final->status = TERMINADA;
     tarefa_atual->status = EXECUTANDO;
@@ -142,10 +155,10 @@ int task_switch(task_t *task) {
     }
 
     task_t *tarefa_final = tarefa_atual;
-    tarefa_atual = task;    
-    
-    tarefa_final->status = PRONTA;
-    tarefa_atual->status = EXECUTANDO;
+    tarefa_atual = task;
+
+    //tarefa_final->status = PRONTA;
+    //tarefa_atual->status = EXECUTANDO;
 
 #ifdef DEBUG
     printf("task_switch: trocando contexto %d -> %d\n", tarefa_final->id, tarefa_atual->id);
@@ -161,20 +174,6 @@ int task_switch(task_t *task) {
 
 int task_id() {
     return tarefa_atual->id;
-}
-
-//Inicializa tarefa principal
-void inicializa_tarefa_principal(){
-    //A tarefa principal não pertence a nenhuma fila
-    tarefa_principal.next = NULL;
-    tarefa_principal.prev = NULL;
-    tarefa_principal.fila_atual = NULL;
-
-    tarefa_principal.id = count++;     //ID da tarefa principal
-    tarefa_principal.parent = NULL;        //A primeira tarefa não possui pai,...
-    tarefa_principal.status = EXECUTANDO;   //... já está em execução quando foi criada ...
-
-    tarefa_atual = &tarefa_principal;      //... e é a tarefa em execução no momento.
 }
 
 // suspende uma tarefa, retirando-a de sua fila atual, adicionando-a à fila
@@ -228,9 +227,7 @@ void task_yield() {
     {
         if (task_set_ready(tarefa_atual)) //Insere a tarefa corrente na fila de prontas, mudando seu estado para PRONTO, ...
         {
-            char error[32];
-            sprintf(error, "Erro ao mudar estado para PRONTA.");
-            perror(error);
+            perror("Erro ao mudar estado para PRONTA.");
             exit(-1);
         }
     } else
@@ -242,31 +239,19 @@ void task_yield() {
 
 //Mostra o ID de uma tarefa na tela (para debug)
 #ifdef DEBUG
-    void task_print(void* task_v)
-    {
-        task_t *task = (task_t *) task_v;
-        printf("<%d>", task->id);
-    }
-#endif 
 
-task_t *scheduler() {
-    //Se a fila tarefas prontas estiver vazia, retorne nulo
-    if (!tarefas_prontas) {
-        return NULL;
-    }
-
-
-    //FCFS- ṕrimeiro elemento da fila será o próximo a executar
-    task_t * next = tarefas_prontas;
-    //Prepara a próxima tarefa para a próxima execução
-    tarefas_prontas = tarefas_prontas->next;
-    return next;
+void task_print(void* task_v) {
+    task_t *task = (task_t *) task_v;
+    printf("<%d>", task->id);
 }
+#endif 
 
 //Corpo de função da tarefa despachante
 
 void dispatcher_body(void *arg) {
+    
     despachante.status = EXECUTANDO; //Despachante em execução
+    
     while (userTasks > 0) //Enquanto houver tarefas de usuários
     {
         task_t* next = scheduler(); //Próxima tarefa dada pelo escalonador
@@ -290,6 +275,22 @@ void dispatcher_body(void *arg) {
     }
     task_exit(0);
 }
+
+task_t *scheduler() {
+    
+    //Se a fila tarefas prontas estiver vazia, retorne nulo
+    if (!tarefas_prontas) {
+        return NULL;
+    }
+
+    //FCFS- ṕrimeiro elemento da fila será o próximo a executar
+    task_t * next = tarefas_prontas;
+    //Prepara a próxima tarefa para a próxima execução
+    tarefas_prontas = tarefas_prontas->next;
+    return next;
+}
+
+
 
 //Função interna para ajudar a mudar o estado de uma tarefa e inseri-la na fila de prontas
 //Retorna 0 caso ocorra tudo certo, -1 caso haja um erro

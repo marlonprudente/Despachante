@@ -4,9 +4,11 @@
  * Desenvolvido através do Netbeans IDE.
  */
 
-#include "queue.h"
+
 #include <stdio.h>
 #include <stdlib.h>
+
+#include "queue.h"
 
 
 //------------------------------------------------------------------------------
@@ -38,16 +40,15 @@ void queue_append(queue_t **queue, queue_t *elem) {
         elem->prev = elem;
         return;
     }
+    
     queue_t* primeiro = *queue;
     queue_t* ultimo = (*queue)->prev;
 
     primeiro->prev = elem; //o elemento passa a apontar para o inicio da fila
     ultimo->next = elem; //o elemento passa a apontar para o antigo final da fila 
+    
     elem->next = primeiro;
     elem->prev = ultimo;
-
-
-
 
 };
 
@@ -128,12 +129,10 @@ queue_t *queue_remove(queue_t **queue, queue_t *elem) {
 
 int queue_size(queue_t *queue) {
 
-
-
     if (!queue) {
         return 0;
     }
-
+    
     queue_t* aux = queue;
     queue_t* fim = aux->prev;
     int cont = 1;
@@ -141,8 +140,8 @@ int queue_size(queue_t *queue) {
     for (; aux != fim; aux = aux->next) {
         cont++;
     }
+    
     return cont;
-
 };
 
 //------------------------------------------------------------------------------

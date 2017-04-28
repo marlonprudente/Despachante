@@ -4,11 +4,13 @@
 //
 // Estruturas de dados internas do sistema operacional
 
-#include <ucontext.h>
-#include "queue.h"
+
 
 #ifndef __DATATYPES__
 #define __DATATYPES__
+
+#include <ucontext.h>
+#include "queue.h"
 
 //Estado de uma tarefa (conforme diagrama de estados): Nova, Pronta, Suspensa, Executando e Terminada.
 enum status_t{NOVA, PRONTA, SUSPENSA, EXECUTANDO, TERMINADA};
