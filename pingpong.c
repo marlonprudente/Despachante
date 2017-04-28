@@ -70,7 +70,7 @@ int task_create(task_t *task, // descritor da nova tarefa
     if (!task) {
         perror("Tarefa vazia: ");
         return -1;
-    }
+    }else{
 
     task->status = NOVA;
     //Iniciando tarefa, no momento ela não pertence a nenhuma fila
@@ -79,7 +79,7 @@ int task_create(task_t *task, // descritor da nova tarefa
     task->fila_atual = NULL;
 
     getcontext(&(task->context));
-    char *pilha = (char *) malloc(STACKSIZE);
+    char *pilha = malloc(STACKSIZE);
 
     if (pilha) {
         task->context.uc_stack.ss_sp = pilha;
@@ -93,21 +93,25 @@ int task_create(task_t *task, // descritor da nova tarefa
         perror("Erro ao criar pilha");
         return -1;
     }
-
+    }
     makecontext(&task->context, (void*) (*start_func), 1, arg); //Associa o contexto à função passada por argumento    
 
     //Tarefa de usuário é sempre maior que 1
     if (task->id > 1) {
         userTasks++; //Nova tarefa de usuário criada
+        //queue_append((queue_t **) &tarefas_prontas, (queue_t *) task);
+       // task->fila_atual = (queue_t **) &tarefas_prontas;        
         if (task_set_ready(task)) //Tenta mudar seu estado para PRONTO e inserir na fila de prontos
         {
             perror("Erro ao mudar estado para PRONTA.");
             return -1;
         }
+        
     } else {
         task->status = PRONTA; //Finalizada as inicializações da tarefa
     }
 
+    
 
 #ifdef DEBUG
 
@@ -249,9 +253,9 @@ void task_print(void* task_v) {
 //Corpo de função da tarefa despachante
 
 void dispatcher_body(void *arg) {
-    
+
     despachante.status = EXECUTANDO; //Despachante em execução
-    
+
     while (userTasks > 0) //Enquanto houver tarefas de usuários
     {
         task_t* next = scheduler(); //Próxima tarefa dada pelo escalonador
@@ -270,19 +274,20 @@ void dispatcher_body(void *arg) {
             despachante.status = PRONTA; //Preparando despachante para troca de tarefa
             task_switch(next); //Executa a próxima tarefa
             despachante.status = EXECUTANDO; //Ao voltar da última tarefa, despachante entra em execução
-        } else if (!tarefas_prontas)
+        } else if (!tarefas_prontas) {
             break;
+        }
+
     }
     task_exit(0);
 }
 
 task_t *scheduler() {
-    
-    //Se a fila tarefas prontas estiver vazia, retorne nulo
+
+    //Se a fila de tarefas prontas estiver vazia, retorne nulo
     if (!tarefas_prontas) {
         return NULL;
     }
-
     //FCFS- ṕrimeiro elemento da fila será o próximo a executar
     task_t * next = tarefas_prontas;
     //Prepara a próxima tarefa para a próxima execução
@@ -298,9 +303,10 @@ task_t *scheduler() {
 int task_set_ready(task_t* task) {
 
     task->status = PRONTA; //Preparado para execução
-
-    if (task->fila_atual) //Se estiver inserido em uma fila, ...
+    //Se estiver inserido em uma fila, ...
+    if (task->fila_atual) {
         queue_remove(task->fila_atual, (queue_t *) task); //... remove-lo desta fila e...
+    }
     queue_append((queue_t **) & tarefas_prontas, (queue_t *) task); //... inseri-lo na fila de prontos, ...
     task->fila_atual = (queue_t **) & tarefas_prontas; //... atualizando sua nova fila em seguida.
 
