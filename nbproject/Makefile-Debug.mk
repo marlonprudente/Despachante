@@ -35,7 +35,9 @@ OBJECTDIR=${CND_BUILDDIR}/${CND_CONF}/${CND_PLATFORM}
 
 # Object Files
 OBJECTFILES= \
-	${OBJECTDIR}/pingpong-dispatcher.o
+	${OBJECTDIR}/pingpong-dispatcher.o \
+	${OBJECTDIR}/pingpong.o \
+	${OBJECTDIR}/queue.o
 
 
 # C Compiler Flags
@@ -66,6 +68,16 @@ ${OBJECTDIR}/pingpong-dispatcher.o: pingpong-dispatcher.c
 	${MKDIR} -p ${OBJECTDIR}
 	${RM} "$@.d"
 	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/pingpong-dispatcher.o pingpong-dispatcher.c
+
+${OBJECTDIR}/pingpong.o: pingpong.c
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/pingpong.o pingpong.c
+
+${OBJECTDIR}/queue.o: queue.c
+	${MKDIR} -p ${OBJECTDIR}
+	${RM} "$@.d"
+	$(COMPILE.c) -g -MMD -MP -MF "$@.d" -o ${OBJECTDIR}/queue.o queue.c
 
 # Subprojects
 .build-subprojects:

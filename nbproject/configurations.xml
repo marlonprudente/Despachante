@@ -4,11 +4,16 @@
     <logicalFolder name="HeaderFiles"
                    displayName="Arquivos de Cabeçalho"
                    projectFiles="true">
+      <itemPath>datatypes.h</itemPath>
+      <itemPath>pingpong.h</itemPath>
+      <itemPath>queue.h</itemPath>
     </logicalFolder>
     <logicalFolder name="SourceFiles"
                    displayName="Arquivos de Código-Fonte"
                    projectFiles="true">
       <itemPath>pingpong-dispatcher.c</itemPath>
+      <itemPath>pingpong.c</itemPath>
+      <itemPath>queue.c</itemPath>
     </logicalFolder>
     <logicalFolder name="ResourceFiles"
                    displayName="Arquivos de Recurso"
@@ -36,7 +41,17 @@
       </toolsSet>
       <compileType>
       </compileType>
+      <item path="datatypes.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="pingpong-dispatcher.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="pingpong.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="pingpong.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="queue.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="queue.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
     <conf name="Release" type="1">
@@ -59,7 +74,17 @@
           <developmentMode>5</developmentMode>
         </asmTool>
       </compileType>
+      <item path="datatypes.h" ex="false" tool="3" flavor2="0">
+      </item>
       <item path="pingpong-dispatcher.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="pingpong.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="pingpong.h" ex="false" tool="3" flavor2="0">
+      </item>
+      <item path="queue.c" ex="false" tool="0" flavor2="0">
+      </item>
+      <item path="queue.h" ex="false" tool="3" flavor2="0">
       </item>
     </conf>
   </confs>
