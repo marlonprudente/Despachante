@@ -34,7 +34,6 @@ int task_set_executing(task_t* task);
 void pingpong_init (){
     //desativa o buffer de saida padrao (stdout), usado pela função printf
     setvbuf(stdout, 0, _IONBF, 0);
-
     init_tarefa_principal();           //Inicializa tarefa principal (atual)
     task_create(&dispatcher, dispatcher_body, "dispatcher :");   //Inicializa despachante de tarefas
 }
@@ -43,8 +42,7 @@ void pingpong_init (){
 // Cria uma nova tarefa. Retorna um ID> 0 ou erro.
 int task_create (task_t *task, void (*start_func)(void *), void *arg){
     //Sanity check
-    if(!task)
-    {
+    if(!task){
         perror ("Tarefa não alocada corretamente: ");
         return -1;
     }
@@ -60,8 +58,7 @@ int task_create (task_t *task, void (*start_func)(void *), void *arg){
     char *stack = malloc (STACKSIZE);   //Inicialização da pilha
 
     //Inicialização do contexto da tarefa
-    if (stack)
-    {
+    if (stack){
         task->context.uc_stack.ss_sp = stack;
         task->context.uc_stack.ss_size = STACKSIZE;
         task->context.uc_stack.ss_flags = 0;
@@ -69,8 +66,7 @@ int task_create (task_t *task, void (*start_func)(void *), void *arg){
         task->id = id_count++;         //Novo ID
         task->parent = tarefa_atual;    //Tarefa corrente é a criadora desta tarefa
     }
-    else
-    {
+    else{
         char error[32];
         sprintf(error, "Erro na criação da pilha da tarefa %d", task->id);
         perror (error);
@@ -80,19 +76,19 @@ int task_create (task_t *task, void (*start_func)(void *), void *arg){
     makecontext (&task->context, (void*)(*start_func), 1, arg);     //Associa o contexto à função passada por argumento
 
     //Caso seja uma tarefa de usuário (ID > 1)
-    if(task->id > 1)
-    {
+    if(task->id > 1){
         userTasks++;                //Nova tarefa de usuário criada
-        if(task_set_ready(task))    //Tenta mudar seu estado para PRONTO e inserir na fila de prontos
-        {
+        if(task_set_ready(task)){    //Tenta mudar seu estado para PRONTO e inserir na fila de prontos
+        
             char error[32];
             sprintf(error, "Erro ao mudar estado da tarefa %d para PRONTA.", task->id);
             perror (error);
             exit(-1);
         }
     }
-    else
+    else{
         task->status = READY;       //Apenas muda o estado, caso seja tarefa principal ou despachante
+    }
 
 
     #ifdef DEBUG
@@ -105,15 +101,18 @@ int task_create (task_t *task, void (*start_func)(void *), void *arg){
 // Termina a tarefa corrente, indicando um valor de status encerramento
 void task_exit (int exitCode){
     //Se a tarefa corrente for a principal, finaliza com código da saída
-    if(tarefa_atual->id == 0)
+    if(tarefa_atual->id == 0){
         exit (exitCode);
+    }
 
     task_t *last_task = tarefa_atual;   //Última tarefa em execução
 
-    if(last_task->id == 1)             //Caso o despachante tente sair...
+    if(last_task->id == 1){             //Caso o despachante tente sair...
         tarefa_atual = &tarefa_principal;      //... a próxima tarefa será a principal, ...
-    else
+    }
+    else{
         tarefa_atual = &dispatcher;     //... caso uma tarefa de usuário tente sair, o despachante será o próximo a executar
+    }
 
     userTasks--;                        //Menos uma tarefa em operação
     last_task->status = FINISHED;       //Tarefa atual será finalizada
@@ -130,8 +129,7 @@ void task_exit (int exitCode){
 // alterna a execução para a tarefa indicada
 int task_switch (task_t *task){
     //Sanity Check
-    if(!task)
-    {
+    if(!task){
         perror ("Tarefa não alocada corretamente: ");
         return -1;
     }
@@ -158,17 +156,20 @@ int task_id (){
 void task_suspend (task_t *task, task_t **queue){
     task_t * working_task;
 
-    if(task)                            //Caso passado uma tarefa como parâmetro...
+    if(task){                            //Caso passado uma tarefa como parâmetro...
         working_task = task;            //... se trabalhará com ela, ...
-    else
+    }
+    else{
         working_task = tarefa_atual;    //... caso contrário, utilize a tarefa em execução.
+    }
 
     working_task->status = SUSPENDED;   //Suspende a tarefa em trabalho
 
-    if(queue) //Se for passado uma fila como parâmetro...
-    {
-        if(working_task->fila_atual) //... verifique se a tarefa está conida em alguma fila, ...
+    if(queue){ //Se for passado uma fila como parâmetro...
+    
+        if(working_task->fila_atual){ //... verifique se a tarefa está conida em alguma fila, ...
             queue_remove(working_task->fila_atual, (queue_t *) working_task); //... se estiver, remova-a da fila atual e, ...
+        }
         queue_append((queue_t **) queue,(queue_t *) working_task);  //... em seguida, adicione à fila passado por parâmetro, ...
         working_task->fila_atual = (queue_t **) queue;    //... atualizando para a nova fila em que se encontra.
     }
@@ -179,13 +180,16 @@ void task_suspend (task_t *task, task_t **queue){
 
 
     //Volta para o despachante, caso a tarefa seja a corrente
-    if(!task)
+    if(!task){
         task_switch(&dispatcher);
+    }
+        
 }
 
 // acorda uma tarefa, retirando-a de sua fila atual, adicionando-a à fila de
 // tarefas prontas ("ready queue") e mudando seu estado para "pronta"
 void task_resume (task_t *task){
+    
     task_set_ready(task);
 
     #ifdef DEBUG
@@ -198,22 +202,24 @@ void task_resume (task_t *task){
 // libera o processador para a próxima tarefa, retornando à fila de tarefas
 // prontas ("ready queue")
 void task_yield (){
+    
     #ifdef DEBUG
     printf("task_yield: liberando-se da tarefa %d\n", tarefa_atual->id);
     #endif  //DEBUG
 
-    if(tarefa_atual->id > 1) //Caso seje uma tarefa de usuário...
-    {
-        if(task_set_ready(tarefa_atual)) //Insere a tarefa corrente na fila de prontas, mudando seu estado para PRONTO, ...
-        {
+    //Tarefa de usuário é sempre maior que 1
+    if(tarefa_atual->id > 1) { //Caso seje uma tarefa de usuário...
+   
+        if(task_set_ready(tarefa_atual)){ //Insere a tarefa corrente na fila de prontas, mudando seu estado para PRONTO, ...        
             char error[32];
             sprintf(error, "Erro ao mudar estado da tarefa %d para PRONTA.", tarefa_atual->id);
             perror (error);
             exit(-1);
         }
     }
-    else
-        tarefa_atual->status = READY;   //Caso contrário, apenas muda seu estado para PRONTO
+    else{
+             tarefa_atual->status = READY;   //Caso contrário, apenas muda seu estado para PRONTO
+    }  
 
     //Retorna para o despachante
     task_switch(&dispatcher);
@@ -221,8 +227,7 @@ void task_yield (){
 
 //Mostra o ID de uma tarefa na tela (para debug)
 #ifdef DEBUG
-    void task_print(void* task_v)
-    {
+    void task_print(void* task_v){
         task_t *task = (task_t *) task_v;
         printf("<%d>", task->id);
     }
@@ -233,17 +238,18 @@ void dispatcher_body(void *arg){
     
     dispatcher.status = EXECUTING;  //Despachante em execução
     
-    while(userTasks > 0)            //Enquanto houver tarefas de usuários
-    {
+    while(userTasks > 0) {           //Enquanto houver tarefas de usuários
+    
         task_t* next = scheduler(); //Próxima tarefa dada pelo escalonador
-        if(next)
-        {
+        if(next){
+            
             #ifdef DEBUG
                 printf("dispatcher_body: tarefa %d a ser executada\n", next->id);
                 queue_print("Tarefas",(queue_t **)fila_tprontas, task_print);
             #endif //DEBUG
-            if(task_set_executing(next))    //Muda estado da próxima tarefa para EXECUTANDO e retira-a da fila atual
-            {
+
+            if(task_set_executing(next)){    //Muda estado da próxima tarefa para EXECUTANDO e retira-a da fila atual
+            
                 char error[32];
                 sprintf(error, "Erro ao mudar estado da tarefa %d para EXECUTANDO.", next->id);
                 perror(error);
@@ -253,8 +259,9 @@ void dispatcher_body(void *arg){
             task_switch(next);              //Executa a próxima tarefa
             dispatcher.status = EXECUTING;  //Ao voltar da última tarefa, despachante entra em execução
         }
-        else if (!fila_tprontas)
+        else if (!fila_tprontas){
             break;
+        }
     }
     task_exit(0);
 }
@@ -262,19 +269,23 @@ void dispatcher_body(void *arg){
 
 //Função do escalonador
 task_t *scheduler(){
+    
     //Se a fila de tarefas prontas estiver vazia, retorne nulo
-    if(!fila_tprontas)
+    if(!fila_tprontas){
         return NULL;
-
+    }
+    
     //FCFS- ṕrimeiro elemento da fila será o próximo a executar
     task_t * next = fila_tprontas;
     //Prepara a próxima tarefa para a próxima execução
     fila_tprontas = fila_tprontas->next;
+    
     return next;
 }
 
 //Inicializa tarefa principal
 void init_tarefa_principal(){
+    
     //A tarefa principal não pertence a nenhuma fila
     tarefa_principal.next = NULL;
     tarefa_principal.prev = NULL;
@@ -290,14 +301,13 @@ void init_tarefa_principal(){
 //Função interna para ajudar a mudar o estado de uma tarefa e inseri-la na fila de prontas
 //Retorna 0 caso ocorra tudo certo, -1 caso haja um erro
 int task_set_ready(task_t* task){
-        /*
-        if(task->status != NEW && task->status != EXECUTING && task->status != SUSPENDED)
-            return -1;
-        */
+
         task->status = READY;       //Preparado para execução
 
-        if(task->fila_atual)     //Se estiver inserido em uma fila, ...
+        if(task->fila_atual){     //Se estiver inserido em uma fila, ...
             queue_remove(task->fila_atual, (queue_t *) task);   //... remove-lo desta fila e...
+        }
+        
         queue_append((queue_t **) &fila_tprontas, (queue_t *) task);     //... inseri-lo na fila de prontos, ...
         task->fila_atual = (queue_t **) &fila_tprontas;    //... atualizando sua nova fila em seguida.
 
@@ -307,10 +317,10 @@ int task_set_ready(task_t* task){
 //Função interna para ajudar a executar e remove-la da fila que está inserida
 //Retorna 0 caso ocorra tudo certo, -1 caso haja um erro
 int task_set_executing(task_t* task){
+    
         task->status = EXECUTING; //Em execução
 
-        if(task->fila_atual) //Se estiver inserido em uma fila, ...
-        {
+        if(task->fila_atual) { //Se estiver inserido em uma fila, ...       
             queue_remove(task->fila_atual, (queue_t *) task);   //... remove-lo desta fila e...
             task->fila_atual = NULL; //... atualizar para fila nula em seguida.
         }
